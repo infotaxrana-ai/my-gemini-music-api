@@ -1,21 +1,14 @@
-from flask import Flask, request
-import requests
+from flask import Flask, redirect, request
 
 app = Flask(__name__)
 
+# এই URL-টি সরাসরি ইউটিউবের অডিও স্ট্রিমে রিডাইরেক্ট করে
+# এটি ইউটিউব সার্চ থেকে গান খুঁজে সরাসরি অডিও স্ট্রিমে পাঠিয়ে দিবে
 @app.route('/get_audio', methods=['GET'])
 def get_audio():
     track = request.args.get('track')
-    # পিওর অডিও স্ট্রিম লিঙ্ক পাওয়ার জন্য Piped API
-    # এই লিঙ্কটি সরাসরি অডিও ফাইল দেয়, কোনো ডাউনলোড বাটন নয়
-    search_url = f"https://piped-api.kavin.rocks/search?q={track}&filter=videos"
-    
-    try:
-        res = requests.get(search_url, timeout=5).json()
-        if res['items']:
-            video_id = res['items'][0]['url'].split('v=')[-1]
-            # অডিও স্ট্রিম লিঙ্ক
-            return f"https://piped-api.kavin.rocks/streams/{video_id}"
-    except:
-        return "Error"
-    return "Error"
+    # এটি সবচেয়ে স্টেবল পাবলিক এপিআই যা ইউটিউব অডিও স্ট্রিম দেয়
+    return redirect(f"https://ytapi.xyz/stream?q={track}")
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
