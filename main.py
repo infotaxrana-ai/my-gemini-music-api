@@ -6,9 +6,9 @@ import os
 
 app = Flask(__name__)
 
-def get_esp_direct_audio_url(song_name):
+def get_pure_esp_audio_url(song_name):
     try:
-        # ১. স্পেসগুলোকে প্লাস (+) চিহ্নে রূপান্তর করে ইউটিউবে সার্চ করা
+        # ১. সার্চ কুয়েরি ইউটিউব স্টাইলে প্লাস চিহ্নে রূপান্তর
         formatted_query = song_name.replace(" ", "+")
         encoded_query = urllib.parse.quote_plus(formatted_query)
         search_url = f"https://www.youtube.com/results?search_query={encoded_query}"
@@ -23,24 +23,32 @@ def get_esp_direct_audio_url(song_name):
         if video_ids:
             video_id = video_ids[0]
             
-            # ২. একটি গ্লোবাল ওপেন-সোর্স অডিও গেটওয়ে (Invidious Instance) ব্যবহার করা
-            # এটি কোনো রিডাইরেক্ট বা বিজ্ঞপ্তির ঝামেলা ছাড়াই সরাসরি অডিও ডেটা স্ট্রিম করে, যা ESP-র জন্য বেস্ট।
-            audio_api_url = f"https://invidious.nerdvpn.de/api/v1/videos/{video_id}"
+            # ২. একটি অত্যন্ত স্টেবল ও গ্লোবাল ওপেন-সোর্স অডিও প্রোভাইডার মেকানিজম ব্যবহার করা
+            # এটি সরাসরি র (Raw) অডিও ফাইল স্ট্রিম লিঙ্ক জেনারেট করে যা কোনো হোস্টিংয়ে ব্লক হয় না
+            direct_provider_url = f"https://api.cobalt.tools/api/json"
             
-            api_response = requests.get(audio_api_url, timeout=10)
-            data = api_response.json()
+            payload = {
+                "url": f"https://www.youtube.com/watch?v={video_id}",
+                "downloadMode": "audio",
+                "audioFormat": "mp3",
+                "audioBitrate": "128"
+            }
             
-            # ৩. শুধু অডিও ফরম্যাটের ডাইরেক্ট লিংকগুলো খুঁজে বের করা
-            if 'adaptiveFormats' in data:
-                for fmt in data['adaptiveFormats']:
-                    # টাইপ যদি অডিও হয় (যেমন: audio/webm বা audio/mp4)
-                    if 'audio/' in fmt.get('type', ''):
-                        direct_url = fmt.get('url')
-                        if direct_url:
-                            return direct_url
-                            
+            api_headers = {
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            }
+            
+            api_response = requests.post(direct_provider_url, json=payload, headers=api_headers, timeout=10)
+            
+            if api_response.status_code == 200:
+                data = api_response.json()
+                if 'url' in data:
+                    # সরাসরি ডাইরেক্ট অডিও .mp3 ফাইল লিঙ্কটি রিটার্ন করবে
+                    return data['url']
+                    
     except Exception as e:
-        print(f"ESP Friendly API Error: {e}")
+        print(f"ESP Configuration Error: {e}")
         return None
     return None
 
@@ -50,8 +58,8 @@ def get_audio():
     if not song_query:
         return "ERROR: No track name", 400
     
-    # সরাসরি পিওর টেক্সট আকারে ডাইরেক্ট অডিও লিংক রিটার্ন করবে
-    direct_audio_link = get_esp_direct_audio_url(song_query)
+    # সরাসরি পিওর টেক্সট আকারে ক্লিন ও র অডিও ফাইলের লিঙ্ক রিটার্ন করবে
+    direct_audio_link = get_pure_esp_audio_url(song_query)
     if direct_audio_link:
         return direct_audio_link, 200
         
