@@ -1,38 +1,17 @@
-from flask import Flask, request
+from flask import Flask, redirect, request
 import requests
 import re
-import urllib.parse
 import os
 
 app = Flask(__name__)
 
-def get_youtube_video_url_perfect(song_name):
-    try:
-        # এখানে স্পেস বা যেকোনো ক্যারেক্টারকে একদম ইউটিউবের মতো প্লাস (+) চিহ্নে রূপান্তর করা হচ্ছে
-        formatted_query = song_name.replace(" ", "+")
-        encoded_query = urllib.parse.quote_plus(formatted_query)
-        
-        search_url = f"https://www.youtube.com/results?search_query={encoded_query}"
-        
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept-Language": "en-US,en;q=0.9"
-        }
-        
-        response = requests.get(search_url, headers=headers, timeout=10)
-        html_content = response.text
-        
-        # ইউটিউবের পেজ সোর্স থেকে ভিডিও আইডি খোঁজার সবচেয়ে শক্তিশালী মেথড
-        video_ids = re.findall(r"\"videoId\":\"([^\"]+)\"", html_content)
-        
-        if video_ids:
-            # প্রথম সঠিক ভিডিও আইডিটি নিয়ে লিংক তৈরি
-            return f"https://www.youtube.com/watch?v={video_ids[0]}"
-            
-    except Exception as e:
-        print(f"Error: {e}")
-        return None
-    return None
+def get_video_id(song_name):
+    # আপনার আগের আইডি খোঁজার লজিকটি সঠিক আছে
+    query = song_name.replace(" ", "+")
+    search_url = f"https://www.youtube.com/results?search_query={query}"
+    response = requests.get(search_url, timeout=10)
+    video_ids = re.findall(r"\"videoId\":\"([^\"]+)\"", response.text)
+    return video_ids[0] if video_ids else None
 
 @app.route('/get_audio', methods=['GET'])
 def get_audio():
@@ -40,9 +19,11 @@ def get_audio():
     if not song_query:
         return "ERROR: No track name", 400
     
-    video_url = get_youtube_video_url_perfect(song_query)
-    if video_url:
-        return video_url, 200
+    video_id = get_video_id(song_query)
+    if video_id:
+        # মেইন পরিবর্তন এখানে: আমরা সরাসরি রিডাইরেক্ট করে দিচ্ছি 
+        # সরাসরি অডিও স্ট্রিম লিঙ্কে (Piped API ব্যবহার করে)
+        return redirect(f"https://piped.video/videoplayback?id={video_id}")
         
     return "ERROR: Not Found", 500
 
