@@ -1,32 +1,35 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request
 import requests
+import re
+import urllib.parse
 import os
 
 app = Flask(__name__)
 
-# Official YouTube API Key
-YOUTUBE_API_KEY = os.environ.get('YOUTUBE_API_KEY', 'AIzaSyDhO1_N_f-86mD9_YV70kG2j8Xl102Am4c')
-
-def get_youtube_video_url(song_name):
-    search_url = "https://www.googleapis.com/youtube/v3/search"
-    params = {
-        'part': 'snippet',
-        'q': song_name,
-        'key': YOUTUBE_API_KEY,
-        'maxResults': 1,
-        'type': 'video'
-    }
-    
+def get_youtube_video_url_no_key(song_name):
     try:
-        response = requests.get(search_url, params=params)
-        data = response.json()
+        # Search query encode করা হচ্ছে
+        encoded_query = urllib.parse.quote(song_name)
+        search_url = f"https://www.youtube.com/results?search_query={encoded_query}"
         
-        if 'items' in data and len(data['items']) > 0:
-            video_id = data['items'][0]['id']['videoId']
-            # Returns official YouTube video link
-            return f"https://www.youtube.com/watch?v={video_id}"
+        # Request headers যাতে ইউটিউব ব্লক না করে
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        
+        response = requests.get(search_url, headers=headers, timeout=10)
+        html_content = response.text
+        
+        # Regular Expression ব্যবহার করে সরাসরি ভিডিও আইডি খুঁজে বের করা
+        video_ids = re.findall(r"\"videoId\":\"([^\"]+)\"", html_content)
+        
+        if video_ids:
+            # প্রথম নিখুঁত ভিডিও আইডিটি নিয়ে ফুল লিংক তৈরি করা
+            first_video_id = video_ids[0]
+            return f"https://www.youtube.com/watch?v={first_video_id}"
+            
     except Exception as e:
-        print(f"API Error: {e}")
+        print(f"Scraping Error: {e}")
         return None
     return None
 
@@ -36,7 +39,7 @@ def get_audio():
     if not song_query:
         return "ERROR: No track name", 400
     
-    video_url = get_youtube_video_url(song_query)
+    video_url = get_youtube_video_url_no_key(song_query)
     if video_url:
         return video_url, 200
         
