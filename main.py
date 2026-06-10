@@ -9,6 +9,8 @@ def get_audio_stream_url(song_name):
         'format': 'bestaudio/best',
         'noplaylist': True,
         'quiet': True,
+        'nocheckcertificate': True,
+        'ext': 'mp3',
     }
     search_query = f"ytsearch:{song_name}"
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -33,6 +35,5 @@ def get_audio():
     return "ERROR: Not Found", 500
 
 if __name__ == '__main__':
-    # Render-এর পোর্ট ডাইনামিকালি সেট করার জন্য
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
