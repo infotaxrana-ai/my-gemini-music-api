@@ -1,19 +1,18 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import requests
 import os
 
 app = Flask(__name__)
 
-# ইউটিউব অফিশিয়াল API এর মাধ্যমে গান খোঁজার ফাংশন
-def get_audio_stream_url_official(song_name):
-    # আমরা একটি ফ্রি অফিশিয়াল এপিআই কী ব্যবহার করছি যা ব্লক হবে না
-    api_key = os.environ.get('YOUTUBE_API_KEY', 'AIzaSyA_ExampleKey_ReplaceIfNeeded')
+# Official YouTube API Key
+YOUTUBE_API_KEY = os.environ.get('YOUTUBE_API_KEY', 'AIzaSyDhO1_N_f-86mD9_YV70kG2j8Xl102Am4c')
+
+def get_youtube_video_url(song_name):
     search_url = "https://www.googleapis.com/youtube/v3/search"
-    
     params = {
         'part': 'snippet',
         'q': song_name,
-        'key': api_key,
+        'key': YOUTUBE_API_KEY,
         'maxResults': 1,
         'type': 'video'
     }
@@ -24,16 +23,8 @@ def get_audio_stream_url_official(song_name):
         
         if 'items' in data and len(data['items']) > 0:
             video_id = data['items'][0]['id']['videoId']
-            # সরাসরি পাইপড বা ইনভিডিয়াস অডিও স্ট্রিম লিঙ্ক জেনারেট করা (যা রেন্ডারে ১০০% চলে)
-            audio_stream_url = f"https://pipedapi.kavin.rocks/streams/{video_id}"
-            
-            # স্ট্রিম ডেটা থেকে আসল অডিও লিঙ্কটি বের করা
-            stream_response = requests.get(audio_stream_url)
-            stream_data = stream_response.json()
-            
-            if 'audioStreams' in stream_data and len(stream_data['audioStreams']) > 0:
-                # সবচেয়ে বেস্ট কোয়ালিটি অডিও লিঙ্ক রিটার্ন করবে
-                return stream_data['audioStreams'][0]['url']
+            # Returns official YouTube video link
+            return f"https://www.youtube.com/watch?v={video_id}"
     except Exception as e:
         print(f"API Error: {e}")
         return None
@@ -45,9 +36,9 @@ def get_audio():
     if not song_query:
         return "ERROR: No track name", 400
     
-    audio_url = get_audio_stream_url_official(song_query)
-    if audio_url:
-        return audio_url, 200
+    video_url = get_youtube_video_url(song_query)
+    if video_url:
+        return video_url, 200
         
     return "ERROR: Not Found", 500
 
